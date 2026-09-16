@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plantel — controle de criatório de canários</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#17251C; --ink-2:#3B4B40; --ink-3:#6E7D72;
+  --surface:#FBF7EF; --panel:#FFFFFF; --panel-2:#F4EFE3;
+  --line:#DCD4C2; --line-soft:#EBE4D5;
+  --canary:#EDA900; --canary-soft:#FFF3D1;
+  --moss:#3E6B4F; --moss-soft:#E3EEE5;
+  --brick:#A8412B; --brick-soft:#F8E5DF;
+  --macho:#35566E; --femea:#8A4A6B;
+  --r:12px;
+}
+:root:not([data-theme="light"]){@media (prefers-color-scheme:dark){
+  --ink:#F0EBDF; --ink-2:#C6C1B4; --ink-3:#929085;
+  --surface:#141A16; --panel:#1C2420; --panel-2:#242D28;
+  --line:#343E37; --line-soft:#2B342E;
+  --canary:#F4BE2E; --canary-soft:#3B3011;
+  --moss:#80B190; --moss-soft:#1F2E24;
+  --brick:#DF8C77; --brick-soft:#33221D;
+  --macho:#90B5CF; --femea:#CF9BB5;
+}}
+:root[data-theme="dark"]{
+  --ink:#F0EBDF; --ink-2:#C6C1B4; --ink-3:#929085;
+  --surface:#141A16; --panel:#1C2420; --panel-2:#242D28;
+  --line:#343E37; --line-soft:#2B342E;
+  --canary:#F4BE2E; --canary-soft:#3B3011;
+  --moss:#80B190; --moss-soft:#1F2E24;
+  --brick:#DF8C77; --brick-soft:#33221D;
+  --macho:#90B5CF; --femea:#CF9BB5;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--surface);color:var(--ink);font-family:Archivo,system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;margin:0;line-height:1.15;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--canary);outline-offset:2px;border-radius:5px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* topo */
+header.top{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:1px solid var(--line)}
+.top-in{max-width:960px;margin:0 auto;padding:12px 18px 0;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{flex:none;width:28px;height:28px;border-radius:50% 50% 50% 4px;background:var(--canary);position:relative;overflow:hidden}
+.mark::after{content:"";position:absolute;right:5px;top:8px;width:4px;height:4px;border-radius:50%;background:#17251C}
+.mark.has-logo::after{display:none}
+.mark img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.brand h1{font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 12px;cursor:pointer;
+  color:var(--ink-3);font-weight:600;font-size:14.5px;white-space:nowrap;border-radius:6px 6px 0 0}
+nav button:hover{color:var(--ink);background:var(--panel-2)}
+nav button[aria-current="true"]{color:var(--ink);border-bottom-color:var(--canary)}
+
+main{max-width:960px;margin:0 auto;padding:22px 18px 80px}
+.head{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.head h2{font-size:26px}
+.head p{margin:4px 0 0;color:var(--ink-3);font-size:13.5px;max-width:58ch}
+
+/* botões */
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 13px;border-radius:9px;cursor:pointer;
+  font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--panel-2)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn-primary:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn-canary{background:var(--canary);border-color:var(--canary);color:#17251C}
+.btn-canary:hover{filter:brightness(.95);background:var(--canary)}
+.btn-sm{padding:5px 10px;font-size:13px;border-radius:7px}
+.btn-ghost{border-color:transparent;background:none;color:var(--ink-3)}
+.btn-ghost:hover{background:var(--panel-2);color:var(--ink)}
+.btn-danger{color:var(--brick)}
+.btn-danger:hover{background:var(--brick-soft)}
+.acts{display:flex;gap:7px;flex-wrap:wrap}
+
+/* peças */
+.anilha{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:20px;overflow:hidden;
+  background:var(--panel);font-size:12.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.anilha i{width:9px;background:var(--band,#999);border-right:1px solid rgba(0,0,0,.15)}
+.anilha b{padding:2px 9px 2px 7px}
+.sx{font-weight:700}.sx-M{color:var(--macho)}.sx-F{color:var(--femea)}.sx-I{color:var(--ink-3)}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
+.t-moss{background:var(--moss-soft);color:var(--moss);border-color:var(--moss)}
+.t-canary{background:var(--canary-soft);color:#8A6300;border-color:var(--canary)}
+.t-brick{background:var(--brick-soft);color:var(--brick);border-color:var(--brick)}
+.t-mute{background:var(--panel-2);color:var(--ink-3);border-color:var(--line)}
+:root[data-theme="dark"] .t-canary{color:var(--canary)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-canary{color:var(--canary)}}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.hint{font-size:12.5px;color:var(--ink-3);margin:6px 0 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+
+/* faixa temporada */
+.season{background:var(--ink);color:var(--surface);border-radius:var(--r);padding:16px 18px;
+  display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
+.season h3{color:var(--surface);font-size:19px}
+.season p{margin:3px 0 0;font-size:13px;color:#BCC7BE;max-width:42ch}
+.snum{display:flex;gap:22px;flex-wrap:wrap}
+.snum b{display:block;font-family:Fraunces;font-size:24px;color:var(--canary);line-height:1}
+.snum span{font-size:11.5px;color:#BCC7BE}
+
+/* stats */
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px}
+.stat b{display:block;font-family:Fraunces;font-size:27px;line-height:1}
+.stat span{display:block;color:var(--ink-3);font-size:12.5px;margin-top:4px}
+
+/* busca e filtros */
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.bar input[type=search],.bar input[type=text]{flex:1;min-width:180px;border:1px solid var(--line);
+  background:var(--panel);padding:9px 12px;border-radius:9px}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel);padding:5px 11px;border-radius:20px;
+  cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-3)}
+.chip:hover{background:var(--panel-2)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+/* lista de aves */
+.itens{display:flex;flex-direction:column;gap:8px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.item.on{border-color:var(--canary)}
+.item>summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.item>summary::-webkit-details-marker{display:none}
+.item>summary:hover{background:var(--panel-2)}
+.item .who{flex:1;min-width:150px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.item .who em{font-style:normal;font-weight:600}
+.thumb{flex:none;width:34px;height:34px;border-radius:8px;object-fit:cover;background:var(--panel-2);border:1px solid var(--line)}
+.thumb-lg{width:96px;height:96px;border-radius:12px;object-fit:cover;background:var(--panel-2);border:1px solid var(--line);flex:none}
+.thumb-ph{display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:11px;text-align:center}
+.up{display:flex;gap:12px;align-items:center}
+.up .ubtns{display:flex;gap:7px;flex-wrap:wrap}
+.up input[type=file]{max-width:0;max-height:0;opacity:0;position:absolute}
+.det{padding:4px 14px 14px;border-top:1px solid var(--line-soft);animation:open .18s ease-out}
+@keyframes open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0}
+.kv div span{display:block;font-size:12px;color:var(--ink-3)}
+.kv div b{font-weight:600;font-size:14px}
+.mini{font-size:13px;padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mini:last-child{border-bottom:0}
+.blocos{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:12px 0}
+.bloco h4{margin:0 0 4px;font-size:12.5px;color:var(--ink-3);font-weight:700;font-family:Archivo}
+
+/* ninhada / progresso */
+.ninho{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:10px}
+.ninho.alerta{border-color:var(--canary)}
+.nh{display:flex;gap:10px;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.nh strong{font-size:14.5px}
+.track{margin:11px 0 8px;height:8px;background:var(--panel-2);border-radius:6px;overflow:hidden;position:relative}
+.track i{display:block;height:100%;background:var(--canary);border-radius:6px;transition:width .5s ease}
+.track i.verde{background:var(--moss)}
+.tlab{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-3)}
+
+/* agenda */
+.ag{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-soft);align-items:flex-start}
+.ag:last-child{border-bottom:0}
+.ag .dt{flex:none;width:46px;text-align:center}
+.ag .dt b{display:block;font-family:Fraunces;font-size:18px;line-height:1}
+.ag .dt span{font-size:11px;color:var(--ink-3)}
+.ag .tx{flex:1;min-width:0}
+.ag .tx strong{font-size:14px}
+.ag .tx p{margin:2px 0 0;font-size:12.5px;color:var(--ink-3)}
+
+/* vazio */
+.empty{text-align:center;padding:44px 20px;border:1px dashed var(--line);border-radius:var(--r);background:var(--panel)}
+.empty h3{font-size:18px;margin-bottom:5px}
+.empty p{color:var(--ink-3);margin:0 auto 14px;max-width:42ch;font-size:14px}
+
+/* tabela simples */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th{text-align:left;font-size:12.5px;color:var(--ink-3);padding:9px 12px;background:var(--panel-2);
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line-soft);font-size:14px}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right}td.act{text-align:right;width:1%;white-space:nowrap}
+
+/* modal */
+.ovl{position:fixed;inset:0;background:rgba(10,16,12,.5);display:flex;padding:20px;overflow-y:auto;z-index:60}
+.ovl[hidden]{display:none}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;margin:auto;
+  animation:pop .18s ease-out}
+@keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.modal h3{padding:18px 20px 0;font-size:19px}
+.modal>p{margin:5px 20px 0;font-size:13px;color:var(--ink-3)}
+.fields{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal footer{padding:12px 20px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line-soft)}
+.f{display:flex;flex-direction:column;gap:4px;grid-column:1/-1}
+.f.half{grid-column:auto}
+.f label{font-size:13px;font-weight:600;color:var(--ink-2)}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:var(--surface);padding:9px 11px;border-radius:9px;width:100%}
+.f textarea{min-height:62px;resize:vertical}
+.f.check{flex-direction:row;align-items:center}.f.check input{width:auto;margin-right:8px}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--surface);
+  padding:10px 18px;border-radius:24px;font-weight:600;font-size:14px;z-index:90;box-shadow:0 6px 22px rgba(0,0,0,.22)}
+#toast[hidden]{display:none}
+
+@media (max-width:640px){
+  .g2,.g3{grid-template-columns:1fr}
+  .fields{grid-template-columns:1fr}
+  .f.half{grid-column:1/-1}
+  .head h2{font-size:22px}
+  main{padding:18px 14px 70px}
+  .top-in{padding:10px 14px 0}
+}
+@media print{header.top,.bar,.acts,.act,.chips{display:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><div class="mark"></div><h1 id="bName">Plantel</h1>
+      <button class="btn btn-sm btn-ghost" id="themeBtn" title="Alternar tema">◐</button></div>
+    <nav id="nav"></nav>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<div class="ovl" id="ovl" hidden><div class="modal" role="dialog" aria-modal="true">
+  <h3 id="mT"></h3><p id="mS"></p><div class="fields" id="mF"></div>
+  <footer><button class="btn" id="mC">Cancelar</button><button class="btn btn-primary" id="mOk">Salvar</button></footer>
+</div></div>
+<div id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ───────── utilidades ───────── */
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,a={},...k)=>{const n=document.createElement(t);
+  for(const p in a){ if(p==="class")n.className=a[p]; else if(p==="html")n.innerHTML=a[p];
+    else if(p.startsWith("on"))n.addEventListener(p.slice(2),a[p]); else if(a[p]!=null&&a[p]!==false)n.setAttribute(p,a[p]); }
+  k.flat().forEach(c=>c!=null&&c!==false&&n.append(c.nodeType?c:document.createTextNode(c))); return n;};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const hoje=()=>new Date().toISOString().slice(0,10);
+const MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function D(v){if(!v)return null;const p=String(v).slice(0,10).split("-");const x=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(x)?null:x;}
+function fmt(v){const x=D(v);return x?`${String(x.getDate()).padStart(2,"0")}/${String(x.getMonth()+1).padStart(2,"0")}/${x.getFullYear()}`:"—";}
+function mais(v,n){const x=D(v);if(!x)return null;x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);}
+function dias(a,b){const x=D(a),y=D(b);return x&&y?Math.round((y-x)/864e5):null;}
+function R$(n){return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+function idade(n){const t=dias(n,hoje());if(t==null)return "—";if(t<60)return t+" dias";const m=Math.floor(t/30.44);return m<24?m+" meses":Math.floor(m/12)+" anos";}
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast._);toast._=setTimeout(()=>t.hidden=true,2400);}
+function foto(file,max){return new Promise((res,rej)=>{
+  if(!file||!file.type||!file.type.startsWith("image/")){rej(new Error("tipo"));return;}
+  const img=new Image(),rd=new FileReader();
+  rd.onerror=()=>rej(new Error("leitura"));
+  rd.onload=()=>{img.onerror=()=>rej(new Error("imagem"));
+    img.onload=()=>{const esc2=Math.min(1,max/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*esc2)),h=Math.max(1,Math.round(img.height*esc2));
+      const cv=document.createElement("canvas");cv.width=w;cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      res(cv.toDataURL("image/jpeg",0.82));};
+    img.src=rd.result;};
+  rd.readAsDataURL(file);});}
+function pergunta(t,fn){if(confirm(t))fn();}
+const PX="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="#ccc"/></svg>');
+const CICLO=[{n:"Azul",c:"#2B6CB0"},{n:"Preto",c:"#1F1F1F"},{n:"Verde",c:"#2F7D4F"},{n:"Laranja",c:"#D97A18"},{n:"Vermelho",c:"#B32424"}];
+const corAno=a=>CICLO[(((+a||2021)-2021)%5+5)%5];
+
+/* ───────── dados ───────── */
+const KEY="criatorio.v1";
+const zero=()=>({config:{nome:"Meu criatório",registro:"",especie:"Canário belga"},
+  aves:[],casais:[],ninhadas:[],saude:[],lancamentos:[],anilhas:[]});
+let S=zero();
+function carregar(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(zero(),JSON.parse(r));}catch(e){console.warn(e);}}
+function gravar(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Não deu para salvar aqui. Exporte um backup.");}}
+function ok(m){gravar();pintar();if(m)toast(m);}
+
+const ave=id=>S.aves.find(a=>a.id===id);
+const plantel=()=>S.aves.filter(a=>a.status==="plantel");
+const nome=id=>{const a=ave(id);return a?(a.anilha||a.nome||"sem anilha"):"—";};
+const rot=id=>{const a=ave(id);return a?`${a.anilha||"s/ anilha"}${a.nome?" · "+a.nome:""}`:"—";};
+const casal=id=>S.casais.find(c=>c.id===id);
+const rotCasal=id=>{const c=casal(id);return c?`${nome(c.macho)} × ${nome(c.femea)}`:"—";};
+const abertas=()=>S.ninhadas.filter(n=>!n.encerrada);
+
+function chip(a){ if(!a)return el("span",{class:"muted small"},"sem anilha");
+  return el("span",{class:"anilha",style:`--band:${corAno(a.anilhaAno).c}`},el("i"),el("b",{},a.anilha||"—")); }
+const sexo=s=>el("span",{class:"sx sx-"+(s||"I"),title:{M:"Macho",F:"Fêmea"}[s]||"Sexo indefinido"},{M:"♂",F:"♀"}[s]||"?");
+function sit(s){const m={plantel:["t-moss","No plantel"],vendido:["t-mute","Vendido"],obito:["t-brick","Óbito"],
+  emprestado:["t-canary","Emprestado"],doado:["t-mute","Doado"],fugiu:["t-brick","Fugiu"]};
+  const[c,t]=m[s]||["t-mute",s||"—"];return el("span",{class:"tag "+c},t);}
+
+/* ───────── formulário ───────── */
+let okFn=null, fotoVals={};
+function form(titulo,sub,campos,vals,salvar){
+  $("#mT").textContent=titulo; $("#mS").textContent=sub||""; $("#mS").style.display=sub?"":"none";
+  const box=$("#mF"); box.innerHTML=""; fotoVals={};
+  campos.forEach(f=>{
+    if(f.tipo==="check"){const w=el("div",{class:"f check"});const i=el("input",{type:"checkbox",id:"c_"+f.k});
+      i.checked=!!vals[f.k];w.append(i,el("label",{for:"c_"+f.k},f.label));box.append(w);return;}
+    if(f.tipo==="foto"){
+      fotoVals[f.k]=vals[f.k]||null;
+      const w=el("div",{class:"f"});
+      w.append(el("label",{},f.label));
+      const up=el("div",{class:"up"});
+      const prev=el("img",{class:"thumb-lg",src:fotoVals[f.k]||PX,alt:""});
+      if(!fotoVals[f.k])prev.style.opacity=".35";
+      const inp=el("input",{type:"file",accept:"image/*",id:"c_"+f.k});
+      const rm=el("button",{type:"button",class:"btn btn-sm btn-ghost",hidden:!fotoVals[f.k],
+        onclick:()=>{fotoVals[f.k]=null;prev.src=PX;prev.style.opacity=".35";rm.hidden=true;}},"Remover foto");
+      inp.onchange=async()=>{const file=inp.files[0];if(!file)return;
+        try{const url=await foto(file,f.max||640);fotoVals[f.k]=url;prev.src=url;prev.style.opacity="1";rm.hidden=false;}
+        catch(e){toast("Não foi possível usar essa imagem.");}};
+      const bl=el("label",{class:"btn btn-sm",for:"c_"+f.k},"Escolher foto");
+      up.append(prev,el("div",{class:"ubtns"},bl,rm),inp);
+      w.append(up); if(f.dica)w.append(el("p",{class:"hint"},f.dica));
+      box.append(w); return;
+    }
+    const w=el("div",{class:"f"+(f.meia?" half":"")});
+    w.append(el("label",{for:"c_"+f.k},f.label+(f.obr?" *":"")));
+    let i;
+    if(f.tipo==="select"){i=el("select",{id:"c_"+f.k});(f.ops||[]).forEach(o=>{
+      const op=el("option",{value:o.v},o.t);if(String(vals[f.k]??"")===String(o.v))op.selected=true;i.append(op);});}
+    else if(f.tipo==="area"){i=el("textarea",{id:"c_"+f.k});i.value=vals[f.k]??"";}
+    else{i=el("input",{id:"c_"+f.k,type:f.tipo||"text",step:f.step,min:f.min,placeholder:f.ph});i.value=vals[f.k]??"";}
+    w.append(i); if(f.dica)w.append(el("p",{class:"hint"},f.dica)); box.append(w);
+  });
+  okFn=()=>{const o={};
+    for(const f of campos){
+      if(f.tipo==="foto"){o[f.k]=fotoVals[f.k]||null;continue;}
+      const i=$("#c_"+f.k);let v=f.tipo==="check"?i.checked:i.value;
+      if(f.tipo==="number")v=v===""?null:Number(v);
+      if(f.obr&&(v===""||v==null)){toast("Preencha: "+f.label);i.focus();return;}
+      o[f.k]=v;}
+    salvar(o);fechar();};
+  $("#ovl").hidden=false;
+  setTimeout(()=>{const p=$("#mF input,#mF select,#mF textarea");p&&p.focus();},30);
+}
+function fechar(){$("#ovl").hidden=true;okFn=null;}
+$("#mOk").onclick=()=>okFn&&okFn();
+$("#mC").onclick=fechar;
+$("#ovl").addEventListener("click",e=>{if(e.target.id==="ovl")fechar();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#ovl").hidden)fechar();});
+
+/* ───────── abas ───────── */
+const ABAS=[["painel","Painel"],["plantel","Plantel"],["reproducao","Reprodução"],["caderno","Caderno"],["ajustes","Ajustes"]];
+let aba=(location.hash||"#painel").slice(1);
+if(!ABAS.some(a=>a[0]===aba))aba="painel";
+addEventListener("hashchange",()=>{const k=location.hash.slice(1);if(ABAS.some(a=>a[0]===k)){aba=k;pintar();}});
+function menu(){const n=$("#nav");n.innerHTML="";
+  ABAS.forEach(([k,t])=>{const b=el("button",{onclick:()=>{aba=k;location.hash="#"+k;pintar();}},t);
+    if(k===aba)b.setAttribute("aria-current","true");n.append(b);});}
+function ir(k){aba=k;location.hash="#"+k;pintar();}
+function topo(t,d,acoes){const h=el("div",{class:"head"});const l=el("div");
+  l.append(el("h2",{},t));if(d)l.append(el("p",{},d));h.append(l);
+  if(acoes)h.append(el("div",{class:"acts"},acoes));return h;}
+function nada(t,p,b){const e=el("div",{class:"empty"});e.append(el("h3",{},t),el("p",{},p));if(b)e.append(b);return e;}
+
+/* ───────── agenda (o coração do painel) ───────── */
+function agenda(){
+  const A=[];
+  abertas().forEach(n=>{
+    if(n.postura&&!n.eclosao){const p=mais(n.postura,14),d=dias(hoje(),p);
+      if(d!=null&&d<=12)A.push({d,data:p,t:"Eclosão prevista",s:rotCasal(n.casal)+" · "+(n.ovos||0)+" ovo(s)",n});}
+    if(n.eclosao&&(n.eclodidos||0)>0&&!n.anilhados){const p=mais(n.eclosao,6),d=dias(hoje(),p);
+      if(d!=null&&d<=14)A.push({d,data:p,t:"Anilhar filhotes",s:rotCasal(n.casal)+" · "+n.eclodidos+" filhote(s)",n});}
+    if(n.eclosao&&(n.eclodidos||0)>0){const p=mais(n.eclosao,30),d=dias(hoje(),p);
+      if(d!=null&&d<=8&&d>=-4)A.push({d,data:p,t:"Desmame",s:"Separar os filhotes de "+rotCasal(n.casal),n});}
+  });
+  S.saude.filter(r=>r.proxima).forEach(r=>{const d=dias(hoje(),r.proxima);
+    if(d!=null&&d<=14)A.push({d,data:r.proxima,t:"Repetir "+(r.tipo||"tratamento").toLowerCase(),
+      s:(r.alvo==="plantel"?"Plantel inteiro":rot(r.ave))+(r.produto?" · "+r.produto:"")});});
+  return A.sort((a,b)=>a.data<b.data?-1:1);
+}
+const quando=d=>d<0?el("span",{class:"tag t-brick"},Math.abs(d)+" dias atrasado"):
+  d===0?el("span",{class:"tag t-canary"},"hoje"):
+  d===1?el("span",{class:"tag t-canary"},"amanhã"):el("span",{class:"tag t-mute"},"em "+d+" dias");
+
+/* ───────── PAINEL ───────── */
+function vPainel(){
+  const v=el("div");
+  v.append(topo(S.config.nome||"Painel","Tudo que precisa de atenção hoje, em uma tela.",
+    [el("button",{class:"btn btn-canary",onclick:()=>novaAve()},"+ Ave")]));
+
+  if(!S.aves.length){
+    v.append(nada("Comece pelo plantel","Cadastre suas matrizes e reprodutores. Depois forme os casais e o sistema passa a avisar sozinho quando cada ninhada vence.",
+      el("div",{class:"acts",style:"justify-content:center"},
+        el("button",{class:"btn btn-primary",onclick:()=>novaAve()},"Cadastrar ave"),
+        el("button",{class:"btn",onclick:exemplo},"Ver com dados de exemplo"))));
+    return v;
+  }
+  const ab=abertas(), ovos=ab.reduce((s,n)=>s+(n.ovos||0),0), fil=ab.reduce((s,n)=>s+(n.eclodidos||0),0);
+  const b=el("div",{class:"season"});
+  b.append(el("div",{},el("h3",{},"Temporada "+new Date().getFullYear()),
+    el("p",{},ab.length?ab.length+" ninhada(s) em andamento agora.":"Nenhuma ninhada aberta. Registre uma postura em Reprodução.")));
+  const bn=el("div",{class:"snum"});
+  [["Ninhadas",ab.length],["Ovos",ovos],["Filhotes",fil]].forEach(([l,n])=>
+    bn.append(el("div",{},el("b",{},String(n)),el("span",{},l))));
+  b.append(bn); v.append(b);
+
+  const g=el("div",{class:"grid g3",style:"margin-bottom:14px"});
+  const pl=plantel();
+  const saldo=S.lancamentos.reduce((s,l)=>s+(l.tipo==="venda"?1:-1)*(l.valor||0),0);
+  const st=(n,l,f)=>el("div",{class:"stat"},el("b",{style:f?"font-size:21px":""},n),el("span",{},l));
+  g.append(st(pl.length,pl.filter(a=>a.sexo==="M").length+" machos · "+pl.filter(a=>a.sexo==="F").length+" fêmeas"),
+    st(String(sobram()),"anilhas disponíveis"),st(R$(saldo),"resultado acumulado",true));
+  v.append(g);
+
+  const A=agenda();
+  const p=el("div",{class:"card"});
+  p.append(el("h3",{style:"font-size:17px;margin-bottom:8px"},"Próximos dias"));
+  if(!A.length)p.append(el("p",{class:"muted small",style:"margin:0"},"Nada pendente no momento."));
+  else A.slice(0,7).forEach(a=>{
+    const x=D(a.data), r=el("div",{class:"ag"});
+    r.append(el("div",{class:"dt"},el("b",{},String(x.getDate())),el("span",{},MES[x.getMonth()])));
+    r.append(el("div",{class:"tx"},el("div",{},el("strong",{},a.t)," ",quando(a.d)),el("p",{},a.s)));
+    if(a.n)r.append(el("button",{class:"btn btn-sm btn-ghost",onclick:()=>ir("reproducao")},"abrir"));
+    p.append(r);
+  });
+  v.append(p);
+  return v;
+}
+
+/* ───────── PLANTEL ───────── */
+let fSexo="", fSit="plantel", fQ="", aberto=null;
+function vPlantel(){
+  const v=el("div");
+  v.append(topo("Plantel","Toque em uma ave para ver ficha, pais, filhos e histórico.",
+    [el("button",{class:"btn btn-canary",onclick:()=>novaAve()},"+ Ave")]));
+  if(!S.aves.length)return v.append(nada("Nenhuma ave cadastrada","Cadastre com a anilha, o sexo e a data de nascimento. O resto você completa depois.",
+    el("button",{class:"btn btn-primary",onclick:()=>novaAve()},"Cadastrar ave"))),v;
+
+  const bar=el("div",{class:"bar"});
+  const q=el("input",{type:"search",placeholder:"Buscar anilha, nome, cor ou gaiola"});q.value=fQ;
+  q.oninput=()=>{fQ=q.value;lista();};
+  bar.append(q);
+  const ch=el("div",{class:"chips"});
+  const grupo=(atual,setar,ops)=>ops.forEach(([val,txt])=>{
+    const c=el("button",{class:"chip","aria-pressed":atual()===val?"true":"false",
+      onclick:()=>{setar(val);pintar();}},txt); ch.append(c);});
+  grupo(()=>fSexo,x=>fSexo=x,[["","Todos"],["M","♂ Machos"],["F","♀ Fêmeas"]]);
+  grupo(()=>fSit,x=>fSit=x,[["plantel","No plantel"],["","Todas as situações"]]);
+  bar.append(ch); v.append(bar);
+
+  const box=el("div",{class:"itens"}); v.append(box);
+  function lista(){
+    const t=fQ.trim().toLowerCase();
+    const arr=S.aves.filter(a=>(!fSexo||a.sexo===fSexo)&&(!fSit||a.status===fSit)&&
+      (!t||[a.anilha,a.nome,a.cor,a.gaiola,a.raca].join(" ").toLowerCase().includes(t)))
+      .sort((a,b)=>String(b.nascimento||"").localeCompare(String(a.nascimento||"")));
+    box.innerHTML="";
+    if(!arr.length){box.append(nada("Nada encontrado","Apague a busca ou mude os filtros acima."));return;}
+    arr.forEach(a=>box.append(fichaAve(a)));
+    cont.textContent=arr.length+" de "+S.aves.length+" aves";
+  }
+  const cont=el("p",{class:"hint"}); v.append(cont);
+  lista();
+  return v;
+}
+
+function fichaAve(a){
+  const d=el("details",{class:"item"+(aberto===a.id?" on":"")});
+  if(aberto===a.id)d.open=true;
+  d.addEventListener("toggle",()=>{aberto=d.open?a.id:(aberto===a.id?null:aberto);});
+  const s=el("summary");
+  s.append(el("div",{class:"who"},
+    a.foto?el("img",{class:"thumb",src:a.foto,alt:""}):null,
+    chip(a),sexo(a.sexo),
+    el("em",{},a.nome||a.cor||"—"),
+    a.gaiola?el("span",{class:"small muted"},a.gaiola):null));
+  s.append(el("span",{class:"small muted"},idade(a.nascimento)),sit(a.status));
+  d.append(s);
+
+  const c=el("div",{class:"det"});
+  const topo2=el("div",{style:"display:flex;gap:14px;align-items:flex-start;margin-top:10px"});
+  topo2.append(a.foto?el("img",{class:"thumb-lg",src:a.foto,alt:""})
+    :el("div",{class:"thumb-lg thumb-ph"},"sem foto"));
+  const kv=el("div",{class:"kv",style:"flex:1;margin:0"});
+  topo2.append(kv); c.append(topo2);
+  [["Nascimento",fmt(a.nascimento)],["Raça",a.raca||"—"],["Cor / mutação",a.cor||"—"],
+   ["Origem",{nascido:"Nascido aqui",comprado:"Comprado",doado:"Doação"}[a.origem]||"—"],
+   ["Gaiola",a.gaiola||"—"],["Pais",a.pai||a.mae?nome(a.pai)+" × "+nome(a.mae):"—"]]
+   .forEach(([l,val])=>kv.append(el("div",{},el("span",{},l),el("b",{},val))));
+  if(a.obs)c.append(el("p",{class:"small",style:"margin:0 0 10px"},a.obs));
+
+  const bl=el("div",{class:"blocos"});
+  const filhos=S.aves.filter(x=>x.pai===a.id||x.mae===a.id);
+  const irmaos=a.pai&&a.mae?S.aves.filter(x=>x.id!==a.id&&x.pai===a.pai&&x.mae===a.mae):[];
+  const trat=S.saude.filter(r=>r.ave===a.id);
+  const vend=S.lancamentos.filter(l=>l.ave===a.id);
+  const bloco=(t,arr,linha,vz)=>{const w=el("div",{class:"bloco"});w.append(el("h4",{},t+" ("+arr.length+")"));
+    if(!arr.length)w.append(el("p",{class:"small muted",style:"margin:0"},vz));
+    else arr.slice(0,6).forEach(x=>w.append(linha(x)));return w;};
+  bl.append(
+    bloco("Avós",[a.pai,a.mae].filter(Boolean).flatMap(id=>{const p=ave(id);return p?[p.pai,p.mae]:[];}).filter(Boolean),
+      id=>el("div",{class:"mini"},chip(ave(id)),sexo(ave(id).sexo)),"Sem avós cadastrados."),
+    bloco("Filhos",filhos,x=>el("div",{class:"mini"},chip(x),sexo(x.sexo),el("span",{class:"muted"},x.cor||"")),"Ainda não teve filhotes."),
+    bloco("Irmãos",irmaos,x=>el("div",{class:"mini"},chip(x),sexo(x.sexo)),"Sem irmãos da mesma ninhada."),
+    bloco("Saúde",trat,r=>el("div",{class:"mini"},el("b",{},fmt(r.data)),el("span",{},r.tipo+(r.produto?" · "+r.produto:""))),"Nenhum tratamento individual."),
+    bloco("Financeiro",vend,l=>el("div",{class:"mini"},el("b",{},fmt(l.data)),
+      el("span",{style:l.tipo==="venda"?"color:var(--moss)":"color:var(--brick)"},(l.tipo==="venda"?"+ ":"− ")+R$(l.valor)),
+      el("span",{class:"muted"},l.descricao||"")),"Sem lançamentos ligados a esta ave.")
+  );
+  c.append(bl);
+  c.append(el("div",{class:"acts"},
+    el("button",{class:"btn btn-sm",onclick:()=>novaAve(a)},"Editar"),
+    el("button",{class:"btn btn-sm",onclick:()=>novoTrat({alvo:"ave",ave:a.id})},"Tratamento"),
+    a.status==="plantel"?el("button",{class:"btn btn-sm",onclick:()=>vender(a)},"Registrar venda"):null,
+    el("button",{class:"btn btn-sm btn-ghost",onclick:()=>window.print()},"Imprimir"),
+    el("button",{class:"btn btn-sm btn-ghost btn-danger",onclick:()=>pergunta("Excluir "+(a.anilha||"esta ave")+"?",()=>{
+      S.aves=S.aves.filter(x=>x.id!==a.id);ok("Ave excluída");})},"Excluir")));
+  d.append(c);
+  return d;
+}
+
+function novaAve(a){
+  const ed=!!a; a=a||{id:uid(),status:"plantel",origem:"nascido",anilhaAno:new Date().getFullYear(),sexo:"I"};
+  const ops=sx=>[{v:"",t:"— não informado —"}].concat(S.aves.filter(x=>x.sexo===sx&&x.id!==a.id).map(x=>({v:x.id,t:rot(x.id)})));
+  form(ed?"Editar ave":"Nova ave","Só a anilha é obrigatória. O resto dá para completar depois.",[
+    {k:"foto",label:"Foto",tipo:"foto",max:640,dica:"Fica salva junto com os dados deste aparelho."},
+    {k:"anilha",label:"Anilha",obr:true,meia:true,ph:"BR 2026 0142"},
+    {k:"anilhaAno",label:"Ano da anilha",tipo:"number",meia:true,dica:"Define a cor da etiqueta."},
+    {k:"sexo",label:"Sexo",tipo:"select",meia:true,ops:[{v:"M",t:"♂ Macho"},{v:"F",t:"♀ Fêmea"},{v:"I",t:"Indefinido"}]},
+    {k:"nascimento",label:"Nascimento",tipo:"date",meia:true},
+    {k:"nome",label:"Nome ou apelido",meia:true},
+    {k:"gaiola",label:"Gaiola",meia:true,ph:"G-12"},
+    {k:"raca",label:"Raça",meia:true,ph:"Belga, Harzer, Gloster..."},
+    {k:"cor",label:"Cor / mutação",meia:true,ph:"Amarelo intenso, ágata..."},
+    {k:"origem",label:"Origem",tipo:"select",meia:true,ops:[{v:"nascido",t:"Nascido aqui"},{v:"comprado",t:"Comprado"},{v:"doado",t:"Doação"}]},
+    {k:"status",label:"Situação",tipo:"select",meia:true,ops:[{v:"plantel",t:"No plantel"},{v:"vendido",t:"Vendido"},
+      {v:"obito",t:"Óbito"},{v:"emprestado",t:"Emprestado"},{v:"doado",t:"Doado"},{v:"fugiu",t:"Fugiu"}]},
+    {k:"pai",label:"Pai",tipo:"select",meia:true,ops:ops("M")},
+    {k:"mae",label:"Mãe",tipo:"select",meia:true,ops:ops("F")},
+    {k:"obs",label:"Observações",tipo:"area",ph:"Canto, porte, premiações..."},
+  ],a,v=>{Object.assign(a,v);if(!ed){S.aves.push(a);aberto=a.id;}ok(ed?"Ave atualizada":"Ave cadastrada");});
+}
+function vender(a){
+  form("Registrar venda","A ave passa para a situação “vendido”.",[
+    {k:"valor",label:"Valor (R$)",tipo:"number",step:"0.01",min:0,obr:true,meia:true},
+    {k:"data",label:"Data",tipo:"date",meia:true},
+    {k:"contato",label:"Comprador"},
+  ],{data:hoje()},v=>{
+    S.lancamentos.push({id:uid(),tipo:"venda",data:v.data||hoje(),valor:v.valor,contato:v.contato,
+      categoria:"Venda de ave",ave:a.id,descricao:"Venda de "+(a.anilha||a.nome||"ave")});
+    a.status="vendido"; ok("Venda registrada");});
+}
+
+/* ───────── REPRODUÇÃO ───────── */
+function vRepro(){
+  const v=el("div");
+  v.append(topo("Reprodução","Casais e ninhadas juntos. Cada ninhada mostra em que dia está.",
+    [el("button",{class:"btn",onclick:()=>novoCasal()},"+ Casal"),
+     el("button",{class:"btn btn-canary",onclick:()=>novaNinhada()},"+ Postura")]));
+
+  if(!S.casais.length)return v.append(nada("Nenhum casal formado","Escolha um macho e uma fêmea do plantel e diga a gaiola. Aí é só lançar a postura.",
+    el("button",{class:"btn btn-primary",onclick:()=>novoCasal()},"Formar casal"))),v;
+
+  S.casais.slice().sort((a,b)=>(a.status==="ativo"?-1:1)-(b.status==="ativo"?-1:1)).forEach(c=>{
+    const card=el("div",{class:"card",style:"margin-bottom:12px"});
+    const h=el("div",{style:"display:flex;gap:10px;align-items:center;flex-wrap:wrap"});
+    h.append(chip(ave(c.macho)),el("span",{class:"muted"},"×"),chip(ave(c.femea)));
+    if(c.gaiola)h.append(el("span",{class:"tag t-mute"},c.gaiola));
+    if(c.status!=="ativo")h.append(el("span",{class:"tag t-mute"},"desfeito"));
+    h.append(el("span",{style:"flex:1"}));
+    h.append(el("button",{class:"btn btn-sm btn-ghost",onclick:()=>novaNinhada({casal:c.id})},"+ postura"),
+      el("button",{class:"btn btn-sm btn-ghost",onclick:()=>novoCasal(c)},"editar"),
+      el("button",{class:"btn btn-sm btn-ghost btn-danger",onclick:()=>pergunta("Excluir este casal? As ninhadas continuam salvas.",()=>{
+        S.casais=S.casais.filter(x=>x.id!==c.id);ok("Casal excluído");})},"×"));
+    card.append(h);
+
+    const ns=S.ninhadas.filter(n=>n.casal===c.id).sort((a,b)=>String(b.postura).localeCompare(String(a.postura)));
+    if(!ns.length)card.append(el("p",{class:"hint"},"Nenhuma postura registrada para este casal."));
+    else ns.forEach(n=>card.append(cardNinhada(n)));
+    v.append(card);
+  });
+  v.append(el("p",{class:"hint"},"Choco de 14 dias, anilhamento no 6º dia de vida, desmame por volta dos 30 dias."));
+  return v;
+}
+
+function cardNinhada(n){
+  const w=el("div",{class:"ninho"});
+  let etapa,pct,txtE,txtD,verde=false,alerta=false;
+  if(!n.eclosao){
+    const dc=dias(n.postura,hoje());
+    etapa="Choco"; pct=Math.min(Math.max(dc/14*100,2),100);
+    txtE="dia "+Math.max(dc,0)+" de 14"; txtD="eclosão prevista "+fmt(mais(n.postura,14));
+    alerta=dc>=12;
+  } else if(!n.anilhados){
+    const dv=dias(n.eclosao,hoje());
+    etapa="Anilhar"; pct=Math.min(Math.max(dv/6*100,2),100);
+    txtE="filhotes com "+Math.max(dv,0)+" dias"; txtD="anilhar até "+fmt(mais(n.eclosao,7));
+    alerta=dv>=4;
+  } else {
+    const dv=dias(n.eclosao,hoje());
+    etapa="Criação"; pct=Math.min(Math.max(dv/30*100,2),100); verde=true;
+    txtE="filhotes com "+Math.max(dv,0)+" dias"; txtD="desmame por volta de "+fmt(mais(n.eclosao,30));
+  }
+  if(n.encerrada){etapa="Encerrada";pct=100;verde=true;alerta=false;txtD="ninhada finalizada";}
+  if(alerta)w.className="ninho alerta";
+
+  const h=el("div",{class:"nh"});
+  h.append(el("strong",{},(n.ninho||"Postura")+" · "+fmt(n.postura)));
+  h.append(el("span",{class:"tag "+(n.encerrada?"t-mute":alerta?"t-canary":"t-moss")},etapa));
+  w.append(h);
+
+  const nums=el("div",{class:"small muted",style:"margin-top:4px"});
+  const parts=[(n.ovos||0)+" ovos"];
+  if(n.gorados)parts.push(n.gorados+" gorados");
+  if(n.eclosao)parts.push((n.eclodidos||0)+" nasceram");
+  if(n.anilhados)parts.push(n.anilhados+" anilhados");
+  if(n.perdidos)parts.push(n.perdidos+" perdidos");
+  nums.textContent=parts.join(" · ");
+  w.append(nums);
+
+  if(!n.encerrada){
+    const t=el("div",{class:"track"});t.append(el("i",{class:verde?"verde":"",style:"width:0%"}));
+    w.append(t,el("div",{class:"tlab"},el("span",{},txtE),el("span",{},txtD)));
+    requestAnimationFrame(()=>{$("i",t).style.width=pct+"%";});
+  }
+
+  const a=el("div",{class:"acts",style:"margin-top:10px"});
+  if(!n.eclosao)a.append(el("button",{class:"btn btn-sm btn-canary",onclick:()=>
+    form("Eclosão","Quantos filhotes nasceram?",[
+      {k:"eclosao",label:"Data da eclosão",tipo:"date",obr:true,meia:true},
+      {k:"eclodidos",label:"Filhotes nascidos",tipo:"number",min:0,obr:true,meia:true}],
+      {eclosao:hoje(),eclodidos:n.ovos||1},v=>{Object.assign(n,v);ok("Eclosão registrada");})},"Nasceram"));
+  else if(!n.anilhados)a.append(el("button",{class:"btn btn-sm btn-canary",onclick:()=>
+    form("Anilhamento","Quantos filhotes você anilhou?",[
+      {k:"anilhados",label:"Filhotes anilhados",tipo:"number",min:0,obr:true}],
+      {anilhados:n.eclodidos||1},v=>{Object.assign(n,v);ok("Anilhamento registrado");})},"Anilhei"));
+  else if(!n.encerrada)a.append(el("button",{class:"btn btn-sm",onclick:()=>{n.encerrada=true;ok("Ninhada encerrada");}},"Encerrar"));
+  a.append(el("button",{class:"btn btn-sm btn-ghost",onclick:()=>novaNinhada(n)},"detalhes"),
+    el("button",{class:"btn btn-sm btn-ghost btn-danger",onclick:()=>pergunta("Excluir esta ninhada?",()=>{
+      S.ninhadas=S.ninhadas.filter(x=>x.id!==n.id);ok("Ninhada excluída");})},"×"));
+  w.append(a);
+  if(n.obs)w.append(el("p",{class:"hint"},n.obs));
+  return w;
+}
+
+function novoCasal(c){
+  const ed=!!c; c=c||{id:uid(),status:"ativo",formado:hoje()};
+  const ms=plantel().filter(a=>a.sexo==="M"), fs=plantel().filter(a=>a.sexo==="F");
+  if(!ms.length||!fs.length){toast("Precisa de um macho e uma fêmea no plantel.");return;}
+  form(ed?"Editar casal":"Formar casal","",[
+    {k:"macho",label:"Macho",tipo:"select",obr:true,meia:true,ops:ms.map(a=>({v:a.id,t:rot(a.id)}))},
+    {k:"femea",label:"Fêmea",tipo:"select",obr:true,meia:true,ops:fs.map(a=>({v:a.id,t:rot(a.id)}))},
+    {k:"gaiola",label:"Gaiola de postura",meia:true,ph:"G-04"},
+    {k:"formado",label:"Juntou em",tipo:"date",meia:true},
+    {k:"status",label:"Situação",tipo:"select",meia:true,ops:[{v:"ativo",t:"Ativo"},{v:"desfeito",t:"Desfeito"}]},
+    {k:"obs",label:"Observações",tipo:"area"},
+  ],c,v=>{Object.assign(c,v);if(!ed)S.casais.push(c);ok(ed?"Casal atualizado":"Casal formado");});
+}
+function novaNinhada(n){
+  const ed=!!n&&!!n.id; n=Object.assign({id:uid(),postura:hoje(),ovos:4,encerrada:false},n||{});
+  if(!S.casais.length){toast("Forme um casal antes.");return;}
+  form(ed?"Ninhada":"Registrar postura","",[
+    {k:"casal",label:"Casal",tipo:"select",obr:true,ops:S.casais.map(c=>({v:c.id,t:rotCasal(c.id)+(c.gaiola?" · "+c.gaiola:"")}))},
+    {k:"ninho",label:"Identificação",meia:true,ph:"1ª postura"},
+    {k:"postura",label:"Data da postura",tipo:"date",obr:true,meia:true},
+    {k:"ovos",label:"Ovos postos",tipo:"number",min:0,meia:true},
+    {k:"gorados",label:"Ovos gorados",tipo:"number",min:0,meia:true},
+    {k:"eclosao",label:"Eclosão",tipo:"date",meia:true},
+    {k:"eclodidos",label:"Nascidos",tipo:"number",min:0,meia:true},
+    {k:"anilhados",label:"Anilhados",tipo:"number",min:0,meia:true},
+    {k:"perdidos",label:"Perdidos",tipo:"number",min:0,meia:true},
+    {k:"encerrada",label:"Ninhada encerrada",tipo:"check"},
+    {k:"obs",label:"Observações",tipo:"area"},
+  ],n,v=>{Object.assign(n,v);if(!ed)S.ninhadas.push(n);ok(ed?"Ninhada atualizada":"Postura registrada");});
+}
+
+/* ───────── CADERNO (saúde + financeiro) ───────── */
+let caderno="saude";
+function vCaderno(){
+  const v=el("div");
+  v.append(topo("Caderno","Tratamentos e dinheiro no mesmo lugar."));
+  const ch=el("div",{class:"chips",style:"margin-bottom:14px"});
+  [["saude","Saúde e manejo"],["fin","Financeiro"]].forEach(([k,t])=>
+    ch.append(el("button",{class:"chip","aria-pressed":caderno===k?"true":"false",
+      onclick:()=>{caderno=k;pintar();}},t)));
+  v.append(ch);
+  v.append(caderno==="saude"?blocoSaude():blocoFin());
+  return v;
+}
+function blocoSaude(){
+  const v=el("div");
+  v.append(el("div",{class:"acts",style:"margin-bottom:12px"},
+    el("button",{class:"btn btn-canary",onclick:()=>novoTrat()},"+ Tratamento")));
+  if(!S.saude.length)return v.append(nada("Nenhum registro sanitário","Anote vermifugação e medicação com produto e dose. Quem compra do seu criatório valoriza esse histórico.",
+    el("button",{class:"btn btn-primary",onclick:()=>novoTrat()},"Registrar tratamento"))),v;
+  const rows=S.saude.slice().sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(r=>{
+    const d=r.proxima?dias(hoje(),r.proxima):null;
+    return el("tr",{},
+      el("td",{},fmt(r.data)),
+      el("td",{},r.alvo==="plantel"?el("span",{class:"tag t-canary"},"Plantel"):el("span",{class:"small"},rot(r.ave))),
+      el("td",{},el("div",{},r.tipo||"—"),r.produto?el("div",{class:"small muted"},r.produto+(r.dose?" · "+r.dose:"")):null),
+      el("td",{},r.proxima?el("span",{class:"tag "+(d<0?"t-brick":d<=7?"t-canary":"t-mute")},fmt(r.proxima)):el("span",{class:"muted"},"—")),
+      el("td",{class:"act"},el("button",{class:"btn btn-sm btn-ghost",onclick:()=>novoTrat(r)},"editar"),
+        el("button",{class:"btn btn-sm btn-ghost btn-danger",onclick:()=>pergunta("Excluir registro?",()=>{
+          S.saude=S.saude.filter(x=>x.id!==r.id);ok("Registro excluído");})},"×")));
+  });
+  v.append(el("div",{class:"tw"},el("table",{},
+    el("thead",{},el("tr",{},["Data","Em quem","Tratamento","Repetir",""].map(t=>el("th",{},t)))),
+    el("tbody",{},rows))));
+  return v;
+}
+function novoTrat(r){
+  const ed=!!r&&!!r.id; r=Object.assign({id:uid(),data:hoje(),alvo:"plantel",tipo:"Vermifugação"},r||{});
+  form(ed?"Editar tratamento":"Registrar tratamento","",[
+    {k:"data",label:"Data",tipo:"date",obr:true,meia:true},
+    {k:"tipo",label:"Tipo",tipo:"select",meia:true,ops:["Vermifugação","Antibiótico","Anticoccidiano","Antifúngico",
+      "Vitaminas","Banho anti-ácaro","Muda de penas","Veterinário","Outro"].map(t=>({v:t,t}))},
+    {k:"alvo",label:"Aplicado em",tipo:"select",meia:true,ops:[{v:"plantel",t:"Plantel inteiro"},{v:"ave",t:"Uma ave"}]},
+    {k:"ave",label:"Qual ave",tipo:"select",meia:true,ops:[{v:"",t:"—"}].concat(S.aves.map(a=>({v:a.id,t:rot(a.id)})))},
+    {k:"produto",label:"Produto",meia:true,ph:"Ivermectina 1%"},
+    {k:"dose",label:"Dose e via",meia:true,ph:"1 gota na nuca"},
+    {k:"proxima",label:"Repetir em",tipo:"date",dica:"Aparece no painel quando chegar perto."},
+    {k:"obs",label:"Observações",tipo:"area"},
+  ],r,v=>{Object.assign(r,v);if(!ed)S.saude.push(r);ok(ed?"Registro atualizado":"Tratamento registrado");});
+}
+function blocoFin(){
+  const v=el("div");
+  v.append(el("div",{class:"acts",style:"margin-bottom:12px"},
+    el("button",{class:"btn btn-canary",onclick:()=>novoLanc("venda")},"+ Venda"),
+    el("button",{class:"btn",onclick:()=>novoLanc("despesa")},"+ Despesa")));
+  if(!S.lancamentos.length)return v.append(nada("Nenhum lançamento","Registre vendas e despesas com ração, anilhas e remédio para saber o resultado real da temporada.",
+    el("button",{class:"btn btn-primary",onclick:()=>novoLanc("venda")},"Lançar venda"))),v;
+  const ent=S.lancamentos.filter(l=>l.tipo==="venda").reduce((s,l)=>s+(l.valor||0),0);
+  const sai=S.lancamentos.filter(l=>l.tipo==="despesa").reduce((s,l)=>s+(l.valor||0),0);
+  const g=el("div",{class:"grid g3",style:"margin-bottom:12px"});
+  g.append(el("div",{class:"stat"},el("b",{style:"font-size:20px;color:var(--moss)"},R$(ent)),el("span",{},"entradas")),
+    el("div",{class:"stat"},el("b",{style:"font-size:20px;color:var(--brick)"},R$(sai)),el("span",{},"saídas")),
+    el("div",{class:"stat"},el("b",{style:"font-size:20px"},R$(ent-sai)),el("span",{},"resultado")));
+  v.append(g);
+  const rows=S.lancamentos.slice().sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(l=>
+    el("tr",{},el("td",{},fmt(l.data)),
+      el("td",{},el("div",{},l.descricao||"—"),el("div",{class:"small muted"},[l.categoria,l.contato].filter(Boolean).join(" · "))),
+      el("td",{class:"num"},el("b",{style:l.tipo==="venda"?"color:var(--moss)":"color:var(--brick)"},
+        (l.tipo==="venda"?"+ ":"− ")+R$(l.valor))),
+      el("td",{class:"act"},el("button",{class:"btn btn-sm btn-ghost",onclick:()=>novoLanc(l.tipo,l)},"editar"),
+        el("button",{class:"btn btn-sm btn-ghost btn-danger",onclick:()=>pergunta("Excluir lançamento?",()=>{
+          S.lancamentos=S.lancamentos.filter(x=>x.id!==l.id);ok("Lançamento excluído");})},"×"))));
+  v.append(el("div",{class:"tw"},el("table",{},
+    el("thead",{},el("tr",{},["Data","Descrição","Valor",""].map(t=>el("th",{},t)))),el("tbody",{},rows))));
+  return v;
+}
+function novoLanc(tipo,l){
+  const ed=!!l&&!!l.id; l=Object.assign({id:uid(),tipo,data:hoje()},l||{});
+  const cats=(l.tipo||tipo)==="venda"?["Venda de ave","Venda de filhote","Prêmio","Outro"]
+    :["Ração e sementes","Suplementos","Medicamentos","Anilhas","Gaiolas e material","Federação","Transporte","Outro"];
+  form(ed?"Editar lançamento":(tipo==="venda"?"Lançar venda":"Lançar despesa"),"",[
+    {k:"data",label:"Data",tipo:"date",obr:true,meia:true},
+    {k:"valor",label:"Valor (R$)",tipo:"number",step:"0.01",min:0,obr:true,meia:true},
+    {k:"descricao",label:"Descrição",obr:true,ph:tipo==="venda"?"Filhote macho amarelo":"10 kg de mistura"},
+    {k:"categoria",label:"Categoria",tipo:"select",meia:true,ops:cats.map(c=>({v:c,t:c}))},
+    {k:"contato",label:tipo==="venda"?"Comprador":"Fornecedor",meia:true},
+    {k:"ave",label:"Ave relacionada",tipo:"select",ops:[{v:"",t:"— nenhuma —"}].concat(S.aves.map(a=>({v:a.id,t:rot(a.id)})))},
+  ],l,v=>{Object.assign(l,v,{tipo:l.tipo||tipo});if(!ed)S.lancamentos.push(l);ok("Lançamento salvo");});
+}
+
+/* ───────── AJUSTES ───────── */
+function usadas(ano){return S.aves.filter(a=>String(a.anilhaAno)===String(ano)).length;}
+function sobram(){return S.anilhas.reduce((s,a)=>s+Math.max((a.total||0)-usadas(a.ano),0),0);}
+function vAjustes(){
+  const v=el("div");
+  v.append(topo("Ajustes","Dados do criatório, estoque de anilhas e backup."));
+
+  const c1=el("div",{class:"card",style:"margin-bottom:12px"});
+  c1.append(el("h3",{style:"font-size:17px"},"Criatório"));
+  const kv=el("div",{class:"kv"});
+  [["Nome",S.config.nome||"—"],["Registro",S.config.registro||"—"],["Espécie",S.config.especie||"—"]]
+    .forEach(([l,t])=>kv.append(el("div",{},el("span",{},l),el("b",{},t))));
+  c1.append(kv,el("button",{class:"btn btn-sm",onclick:()=>form("Dados do criatório","Aparecem no topo do sistema e na impressão.",[
+    {k:"logo",label:"Logo do criatório",tipo:"foto",max:200},
+    {k:"nome",label:"Nome do criatório",obr:true},
+    {k:"registro",label:"Registro (SISPASS / IBAMA)",meia:true,ph:"1.234.567"},
+    {k:"especie",label:"Espécie principal",meia:true},
+  ],S.config,x=>{Object.assign(S.config,x);ok("Dados atualizados");})},"Editar"));
+  v.append(c1);
+
+  const c2=el("div",{class:"card",style:"margin-bottom:12px"});
+  c2.append(el("div",{style:"display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"},
+    el("h3",{style:"font-size:17px"},"Anilhas · "+sobram()+" disponíveis"),
+    el("button",{class:"btn btn-sm",onclick:()=>novoLote()},"+ Lote")));
+  const cs=el("div",{style:"display:flex;gap:14px;flex-wrap:wrap;margin:10px 0"});
+  const y=new Date().getFullYear()-1;
+  for(let i=0;i<5;i++){const A=y+i,c=corAno(A);
+    cs.append(el("div",{style:"display:flex;align-items:center;gap:6px"},
+      el("span",{style:`width:13px;height:13px;border-radius:50%;background:${c.c};border:1px solid var(--line)`}),
+      el("span",{class:"small"},A+" · "+c.n)));}
+  c2.append(cs,el("p",{class:"hint"},"Ciclo de cinco cores como referência. Confirme com a sua federação."));
+  if(S.anilhas.length){
+    const rows=S.anilhas.slice().sort((a,b)=>b.ano-a.ano).map(l=>{
+      const u=usadas(l.ano),r=Math.max((l.total||0)-u,0);
+      return el("tr",{},el("td",{},el("div",{style:"display:flex;align-items:center;gap:6px"},
+        el("span",{style:`width:11px;height:11px;border-radius:50%;background:${corAno(l.ano).c}`}),el("b",{},String(l.ano)))),
+        el("td",{class:"small"},[l.federacao,l.faixa,l.tamanho].filter(Boolean).join(" · ")||"—"),
+        el("td",{class:"num"},String(l.total||0)),el("td",{class:"num"},String(u)),
+        el("td",{class:"num"},el("b",{style:r?"":"color:var(--brick)"},String(r))),
+        el("td",{class:"act"},el("button",{class:"btn btn-sm btn-ghost",onclick:()=>novoLote(l)},"editar"),
+          el("button",{class:"btn btn-sm btn-ghost btn-danger",onclick:()=>pergunta("Excluir lote?",()=>{
+            S.anilhas=S.anilhas.filter(x=>x.id!==l.id);ok("Lote excluído");})},"×")));});
+    c2.append(el("div",{class:"tw",style:"margin-top:10px"},el("table",{},
+      el("thead",{},el("tr",{},["Ano","Lote","Recebidas","Usadas","Restam",""].map(t=>el("th",{},t)))),el("tbody",{},rows))));
+  }
+  v.append(c2);
+
+  const c3=el("div",{class:"card"});
+  c3.append(el("h3",{style:"font-size:17px"},"Backup"),
+    el("p",{class:"small muted",style:"margin:4px 0 0"},"Os dados ficam gravados neste navegador. Exporte todo mês e guarde o arquivo."));
+  const f=el("input",{type:"file",accept:".json",style:"display:none"});
+  f.onchange=()=>{const a=f.files[0];if(!a)return;const r=new FileReader();
+    r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.aves)throw 0;
+      pergunta("Restaurar este backup? Os dados atuais serão substituídos.",()=>{S=Object.assign(zero(),j);ok("Backup restaurado");});
+    }catch(e){toast("Arquivo inválido.");}};
+    r.readAsText(a);};
+  c3.append(el("div",{class:"acts",style:"margin-top:12px"},
+    el("button",{class:"btn btn-primary",onclick:expJSON},"Baixar backup"),
+    el("button",{class:"btn",onclick:expCSV},"Plantel em CSV"),
+    el("button",{class:"btn",onclick:()=>f.click()},"Restaurar arquivo"),
+    el("button",{class:"btn",onclick:()=>pergunta("Carregar dados de exemplo por cima do que existe?",exemplo)},"Dados de exemplo"),
+    el("button",{class:"btn btn-danger",onclick:()=>pergunta("Apagar TODOS os dados? Não dá para desfazer.",()=>{S=zero();ok("Tudo apagado");})},"Apagar tudo")),f);
+  const r=el("div",{class:"kv",style:"margin-top:14px"});
+  [["Aves",S.aves.length],["Casais",S.casais.length],["Ninhadas",S.ninhadas.length],
+   ["Saúde",S.saude.length],["Lançamentos",S.lancamentos.length]]
+   .forEach(([l,n])=>r.append(el("div",{},el("span",{},l),el("b",{},String(n)))));
+  c3.append(r);
+  v.append(c3);
+  return v;
+}
+function novoLote(l){
+  const ed=!!l; l=l||{id:uid(),ano:new Date().getFullYear(),total:50,tamanho:"2,9 mm"};
+  form(ed?"Editar lote":"Lote de anilhas","",[
+    {k:"ano",label:"Ano",tipo:"number",obr:true,meia:true},
+    {k:"total",label:"Quantidade recebida",tipo:"number",min:0,meia:true},
+    {k:"federacao",label:"Federação",meia:true,ph:"FOB, COBRAV"},
+    {k:"tamanho",label:"Diâmetro",meia:true,ph:"2,9 mm"},
+    {k:"faixa",label:"Numeração",ph:"0201 a 0250"},
+  ],l,v=>{Object.assign(l,v);if(!ed)S.anilhas.push(l);ok(ed?"Lote atualizado":"Lote lançado");});
+}
+function baixar(n,c,t){try{const b=new Blob([c],{type:t}),u=URL.createObjectURL(b);
+  const a=el("a",{href:u,download:n});document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1500);toast("Arquivo gerado");}catch(e){toast("O navegador bloqueou o download.");}}
+function expJSON(){baixar(`criatorio-${hoje()}.json`,JSON.stringify(S,null,2),"application/json");}
+function expCSV(){
+  const h=["Anilha","Ano","Nome","Sexo","Raca","Cor","Nascimento","Gaiola","Origem","Situacao","Pai","Mae","Obs"];
+  const L=S.aves.map(a=>[a.anilha,a.anilhaAno,a.nome,a.sexo,a.raca,a.cor,a.nascimento,a.gaiola,a.origem,a.status,nome(a.pai),nome(a.mae),a.obs]
+    .map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(";"));
+  baixar(`plantel-${hoje()}.csv`,"\uFEFF"+[h.join(";")].concat(L).join("\n"),"text/csv");
+}
+
+/* ───────── exemplo ───────── */
+function exemplo(){
+  const A=new Date().getFullYear();
+  const mk=(an,ano,nm,sx,cor,nasc,g,ex={})=>Object.assign({id:uid(),anilha:an,anilhaAno:ano,nome:nm,sexo:sx,cor,
+    raca:"Canário belga",nascimento:nasc,gaiola:g,origem:"comprado",status:"plantel"},ex);
+  const a1=mk("BR "+(A-2)+" 0031",A-2,"Ouro Fino","M","Amarelo intenso",(A-2)+"-09-14","G-01");
+  const a2=mk("BR "+(A-2)+" 0044",A-2,"Dama","F","Branco dominante",(A-2)+"-10-02","G-01");
+  const a3=mk("BR "+(A-1)+" 0108",A-1,"Rajado","M","Ágata prata",(A-1)+"-08-21","G-02");
+  const a4=mk("BR "+(A-1)+" 0112",A-1,"Serena","F","Mosaico vermelho",(A-1)+"-09-05","G-02");
+  const f1=mk("BR "+A+" 0201",A,"","M","Amarelo intenso",mais(hoje(),-24),"G-01",{origem:"nascido",pai:a1.id,mae:a2.id});
+  const f2=mk("BR "+A+" 0202",A,"","F","Branco dominante",mais(hoje(),-24),"G-01",{origem:"nascido",pai:a1.id,mae:a2.id});
+  const c1={id:uid(),macho:a1.id,femea:a2.id,gaiola:"G-01",formado:mais(hoje(),-52),status:"ativo"};
+  const c2={id:uid(),macho:a3.id,femea:a4.id,gaiola:"G-02",formado:mais(hoje(),-44),status:"ativo"};
+  S={config:{nome:"Criatório São Bento",registro:"1.234.567",especie:"Canário belga"},
+    aves:[a1,a2,a3,a4,f1,f2],casais:[c1,c2],
+    ninhadas:[
+      {id:uid(),casal:c1.id,ninho:"1ª postura",postura:mais(hoje(),-38),ovos:4,gorados:1,
+       eclosao:mais(hoje(),-24),eclodidos:3,anilhados:2,perdidos:1,encerrada:false,obs:"Papinha a cada 3 h na primeira semana."},
+      {id:uid(),casal:c2.id,ninho:"1ª postura",postura:mais(hoje(),-11),ovos:5,encerrada:false}],
+    saude:[{id:uid(),data:mais(hoje(),-40),alvo:"plantel",tipo:"Vermifugação",produto:"Ivermectina 1%",dose:"1 gota na nuca",proxima:mais(hoje(),3)},
+      {id:uid(),data:mais(hoje(),-12),alvo:"ave",ave:a4.id,tipo:"Vitaminas",produto:"Complexo vitamínico",dose:"1 ml/L por 5 dias"}],
+    lancamentos:[{id:uid(),tipo:"despesa",data:mais(hoje(),-30),valor:184.9,descricao:"20 kg de mistura",categoria:"Ração e sementes",contato:"Agropecuária"},
+      {id:uid(),tipo:"despesa",data:mais(hoje(),-60),valor:95,descricao:"50 anilhas",categoria:"Anilhas",contato:"Federação"},
+      {id:uid(),tipo:"venda",data:mais(hoje(),-7),valor:350,descricao:"Casal de belgas adultos",categoria:"Venda de ave",contato:"Sr. Nelson"}],
+    anilhas:[{id:uid(),ano:A,federacao:"FOB",faixa:"0201 a 0250",tamanho:"2,9 mm",total:50},
+      {id:uid(),ano:A-1,federacao:"FOB",faixa:"0101 a 0140",tamanho:"2,9 mm",total:40}]};
+  ir("painel"); ok("Dados de exemplo carregados");
+}
+
+/* ───────── tema ───────── */
+function tema(){try{return localStorage.getItem(KEY+".tema")||"auto";}catch(e){return "auto";}}
+function aplicar(){const t=tema();t==="auto"?document.documentElement.removeAttribute("data-theme")
+  :document.documentElement.setAttribute("data-theme",t);}
+$("#themeBtn").onclick=()=>{const o=["auto","light","dark"],t=o[(o.indexOf(tema())+1)%3];
+  try{localStorage.setItem(KEY+".tema",t);}catch(e){}aplicar();toast("Tema "+({auto:"automático",light:"claro",dark:"escuro"})[t]);};
+
+/* ───────── render ───────── */
+const TELAS={painel:vPainel,plantel:vPlantel,reproducao:vRepro,caderno:vCaderno,ajustes:vAjustes};
+function pintar(){
+  menu();
+  $("#bName").textContent=S.config.nome||"Plantel";
+  const mk=$(".mark");
+  if(S.config.logo){mk.classList.add("has-logo");mk.innerHTML="";mk.append(el("img",{src:S.config.logo,alt:""}));}
+  else{mk.classList.remove("has-logo");mk.innerHTML="";}
+  const v=$("#view");v.innerHTML="";v.append(TELAS[aba]());
+}
+carregar();aplicar();pintar();
+</script>
+</body>
+</html>
