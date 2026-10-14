@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plantel — controle de criatório de canários</title>
+<meta name="description" content="Organize seu criatório de canários: controle do plantel, reprodução, ninhadas, saúde, anilhas, despesas e registros em um só lugar.">
+<meta name="theme-color" content="#FBF7EF">
+<meta name="robots" content="noindex,nofollow">
+<title>Plantel | Gestão de criatório de canários</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -46,6 +49,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--canary);outline-offset:2px;border-radius:5px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* navegação por teclado */
+.skip-link{position:absolute;top:-80px;left:12px;z-index:120;background:var(--ink);color:var(--surface);padding:10px 14px;border-radius:8px}
+.skip-link:focus{top:8px}
 /* topo */
 header.top{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:1px solid var(--line)}
 .top-in{max-width:960px;margin:0 auto;padding:12px 18px 0;display:flex;flex-direction:column;gap:10px}
@@ -218,22 +224,23 @@ td.num{text-align:right}td.act{text-align:right;width:1%;white-space:nowrap}
 </style>
 </head>
 <body>
+<a href="#view" class="skip-link">Pular para o conteúdo</a>
 
 <header class="top">
   <div class="top-in">
     <div class="brand"><div class="mark"></div><h1 id="bName">Plantel</h1>
-      <button class="btn btn-sm btn-ghost" id="themeBtn" title="Alternar tema">◐</button></div>
-    <nav id="nav"></nav>
+      <button class="btn btn-sm btn-ghost" id="themeBtn" title="Alternar tema" aria-label="Alternar tema claro e escuro" type="button">◐</button></div>
+    <nav id="nav" aria-label="Navegação principal"></nav>
   </div>
 </header>
 
-<main id="view"></main>
+<main id="view" tabindex="-1"></main>
 
-<div class="ovl" id="ovl" hidden><div class="modal" role="dialog" aria-modal="true">
+<div class="ovl" id="ovl" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mT" aria-describedby="mS">
   <h3 id="mT"></h3><p id="mS"></p><div class="fields" id="mF"></div>
   <footer><button class="btn" id="mC">Cancelar</button><button class="btn btn-primary" id="mOk">Salvar</button></footer>
 </div></div>
-<div id="toast" hidden></div>
+<div id="toast" hidden role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 "use strict";
@@ -244,11 +251,12 @@ const el=(t,a={},...k)=>{const n=document.createElement(t);
     else if(p.startsWith("on"))n.addEventListener(p.slice(2),a[p]); else if(a[p]!=null&&a[p]!==false)n.setAttribute(p,a[p]); }
   k.flat().forEach(c=>c!=null&&c!==false&&n.append(c.nodeType?c:document.createTextNode(c))); return n;};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const hoje=()=>new Date().toISOString().slice(0,10);
+const dateLocal=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
+const hoje=()=>dateLocal(new Date());
 const MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-function D(v){if(!v)return null;const p=String(v).slice(0,10).split("-");const x=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(x)?null:x;}
+function D(v){if(!v)return null;const p=String(v).slice(0,10).split("-");const x=new Date(+p[0],+p[1]-1,+p[2]);return !Number.isFinite(x.getTime())||x.getFullYear()!==+p[0]||x.getMonth()!==+p[1]-1||x.getDate()!==+p[2]?null:x;}
 function fmt(v){const x=D(v);return x?`${String(x.getDate()).padStart(2,"0")}/${String(x.getMonth()+1).padStart(2,"0")}/${x.getFullYear()}`:"—";}
-function mais(v,n){const x=D(v);if(!x)return null;x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);}
+function mais(v,n){const x=D(v);if(!x)return null;x.setDate(x.getDate()+n);return dateLocal(x);}
 function dias(a,b){const x=D(a),y=D(b);return x&&y?Math.round((y-x)/864e5):null;}
 function R$(n){return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
 function idade(n){const t=dias(n,hoje());if(t==null)return "—";if(t<60)return t+" dias";const m=Math.floor(t/30.44);return m<24?m+" meses":Math.floor(m/12)+" anos";}
@@ -275,7 +283,7 @@ const KEY="criatorio.v1";
 const zero=()=>({config:{nome:"Meu criatório",registro:"",especie:"Canário belga"},
   aves:[],casais:[],ninhadas:[],saude:[],lancamentos:[],anilhas:[]});
 let S=zero();
-function carregar(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(zero(),JSON.parse(r));}catch(e){console.warn(e);}}
+function carregar(){try{const r=localStorage.getItem(KEY);if(r){const j=JSON.parse(r);if(j&&typeof j==="object"&&["aves","casais","ninhadas","saude","lancamentos","anilhas"].every(k=>Array.isArray(j[k])))S={...zero(),...j,config:{...zero().config,...j.config}};else console.warn("Dados locais incompatíveis; nenhum registro foi substituído.");}}catch(e){console.warn(e);}}
 function gravar(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Não deu para salvar aqui. Exporte um backup.");}}
 function ok(m){gravar();pintar();if(m)toast(m);}
 
@@ -337,14 +345,20 @@ function form(titulo,sub,campos,vals,salvar){
       if(f.obr&&(v===""||v==null)){toast("Preencha: "+f.label);i.focus();return;}
       o[f.k]=v;}
     salvar(o);fechar();};
+  focoAnterior=document.activeElement;
   $("#ovl").hidden=false;
   setTimeout(()=>{const p=$("#mF input,#mF select,#mF textarea");p&&p.focus();},30);
 }
-function fechar(){$("#ovl").hidden=true;okFn=null;}
+let focoAnterior=null;
+function fechar(){$("#ovl").hidden=true;okFn=null;if(focoAnterior&&document.contains(focoAnterior))focoAnterior.focus();}
 $("#mOk").onclick=()=>okFn&&okFn();
 $("#mC").onclick=fechar;
 $("#ovl").addEventListener("click",e=>{if(e.target.id==="ovl")fechar();});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#ovl").hidden)fechar();});
+document.addEventListener("keydown",e=>{
+  if($("#ovl").hidden)return;
+  if(e.key==="Escape"){fechar();return;}
+  if(e.key==="Tab"){const fs=[...$("#ovl").querySelectorAll("button:not([disabled]):not([hidden]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])")].filter(n=>n.getClientRects().length);if(!fs.length)return;const first=fs[0],last=fs[fs.length-1];if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}}
+});
 
 /* ───────── abas ───────── */
 const ABAS=[["painel","Painel"],["plantel","Plantel"],["reproducao","Reprodução"],["caderno","Caderno"],["ajustes","Ajustes"]];
@@ -353,7 +367,7 @@ if(!ABAS.some(a=>a[0]===aba))aba="painel";
 addEventListener("hashchange",()=>{const k=location.hash.slice(1);if(ABAS.some(a=>a[0]===k)){aba=k;pintar();}});
 function menu(){const n=$("#nav");n.innerHTML="";
   ABAS.forEach(([k,t])=>{const b=el("button",{onclick:()=>{aba=k;location.hash="#"+k;pintar();}},t);
-    if(k===aba)b.setAttribute("aria-current","true");n.append(b);});}
+    if(k===aba)b.setAttribute("aria-current","page");n.append(b);});}
 function ir(k){aba=k;location.hash="#"+k;pintar();}
 function topo(t,d,acoes){const h=el("div",{class:"head"});const l=el("div");
   l.append(el("h2",{},t));if(d)l.append(el("p",{},d));h.append(l);
@@ -843,7 +857,7 @@ function novoLote(l){
 }
 function baixar(n,c,t){try{const b=new Blob([c],{type:t}),u=URL.createObjectURL(b);
   const a=el("a",{href:u,download:n});document.body.append(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(u),1500);toast("Arquivo gerado");}catch(e){toast("O navegador bloqueou o download.");}}
+  setTimeout(()=>URL.revokeObjectURL(u),10000);toast("Arquivo gerado");}catch(e){toast("O navegador bloqueou o download.");}}
 function expJSON(){baixar(`criatorio-${hoje()}.json`,JSON.stringify(S,null,2),"application/json");}
 function expCSV(){
   const h=["Anilha","Ano","Nome","Sexo","Raca","Cor","Nascimento","Gaiola","Origem","Situacao","Pai","Mae","Obs"];
